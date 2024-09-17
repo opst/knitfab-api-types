@@ -207,6 +207,11 @@ func (u UserTag) Equal(o UserTag) bool {
 	return ut.Equal(ot)
 }
 
+// Change is the format for request body to change tags.
+//
+// This type is used for:
+//
+// - POST /api/data/{knitId}
 type Change struct {
 	AddTags    []UserTag `json:"add"`
 	RemoveTags []UserTag `json:"remove"`

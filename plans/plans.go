@@ -101,6 +101,17 @@ func (i *Image) String() string {
 	return i.marshal()
 }
 
+// Detail is the format for the response body from Knitfab APIs below:
+//
+// - GET  /api/plans/ (as list)
+//
+// - POST /api/plans/
+//
+// - GET  /api/plans/{planId}
+//
+// - PUT  /api/plans/{planId}/active
+//
+// - PUT  /api/plans/{planId}/resources
 type Detail struct {
 	Summary
 	// props in Summary will be flattened in json.
@@ -267,6 +278,9 @@ func (r *Resources) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// PlanSpec is the format for request body to Knitfab APIs below:
+//
+// - POST /api/plans/
 type PlanSpec struct {
 	Image     Image        `json:"image" yaml:"image"`
 	Inputs    []Mountpoint `json:"inputs" yaml:"inputs"`

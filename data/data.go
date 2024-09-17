@@ -17,6 +17,17 @@ func (s *Summary) Equal(o *Summary) bool {
 		cmp.SliceEqualUnordered(s.Tags, o.Tags)
 }
 
+// Detail is the format for response body from WebAPIs below:
+//
+// - GET  /api/data/[?...] (as list)
+//
+// - POST /api/data/
+//
+// - PUT  /api/data/{knitId}
+//
+// Other Data related WebAPI respones do not use this for response.
+//
+// - GET  /api/data/{knitId} : as binary stream (Content-Type: application/octet-stream)
 type Detail struct {
 	KnitId      string        `json:"knitId"`
 	Tags        []tags.Tag    `json:"tags"`

@@ -35,6 +35,25 @@ func (e Exit) Equal(o Exit) bool {
 	return e.Code == o.Code && e.Message == o.Message
 }
 
+// Detail is the format for response body from WebAPIs below:
+//
+// - GET /api/runs/[?...] (as list)
+//
+// - GET /api/runs/{runId}
+//
+// - GET /api/runs/{runId}
+//
+// - PUT /api/runs/{runId}/abort
+//
+// - PUT /api/runs/{runId}/tearoff
+//
+// - PUT /api/runs/{runId}/retry
+//
+// Other Run related WebAPI do not use this for response.
+//
+// - GET    /api/runs/{runId}/log: text stream (Content-Type: text/plain)
+//
+// - DELETE /api/runs/{runId}: empty response ("204 No Content" on success)
 type Detail struct {
 	Summary
 	Inputs  []Assignment `json:"inputs"`
