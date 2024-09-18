@@ -14,9 +14,18 @@ import (
 )
 
 type Summary struct {
+	// PlanId is the id of the Plan.
 	PlanId string `json:"planId"`
-	Image  *Image `json:"image,omitempty"`
-	Name   string `json:"name,omitempty"`
+
+	// Image is the container image of the Plan.
+	//
+	// This is exclusive with Name.
+	Image *Image `json:"image,omitempty"`
+
+	// Name is the name of the Plan.
+	//
+	// This is exclusive with Image, and used only for the system-builtin Plan with no image.
+	Name string `json:"name,omitempty"`
 }
 
 func (s Summary) Equal(o Summary) bool {
@@ -114,20 +123,37 @@ func (i *Image) String() string {
 // - PUT  /api/plans/{planId}/resources
 type Detail struct {
 	Summary
-	// props in Summary will be flattened in json.
-	//     see also: https://github.com/golang/go/issues/7230
 
-	Inputs    []Mountpoint `json:"inputs"`
-	Outputs   []Mountpoint `json:"outputs"`
-	Log       *LogPoint    `json:"log,omitempty"`
-	Active    bool         `json:"active"`
-	OnNode    *OnNode      `json:"on_node,omitempty"`
-	Resources Resources    `json:"resources,omitempty"`
+	// Inputs are the input mountpoints of the plan.
+	Inputs []Mountpoint `json:"inputs"`
+
+	// Outputs are the output mountpoints of the plan.
+	Outputs []Mountpoint `json:"outputs"`
+
+	// Log is the log point of the plan.
+	//
+	// If nil, the plan does not record logs.
+	Log *LogPoint `json:"log,omitempty"`
+
+	// Active shows Plan's activeness.
+	//
+	// It is true if the plan is active and new runs can be created.
+	Active bool `json:"active"`
+
+	// OnNode is the node affinity/torelance of the plan.
+	//
+	// If nil, the plan does not have node affinity/torelance.
+	OnNode *OnNode `json:"on_node,omitempty"`
+
+	// Resources is the resource limits and requiremnts of the plan.
+	Resources Resources `json:"resources,omitempty"`
 }
 
 func (d Detail) Equal(o Detail) bool {
-	logEq := d.Log == nil && o.Log == nil || (d.Log != nil && o.Log != nil && d.Log.Equal(*o.Log))
-	onnodeEq := d.OnNode == nil && o.OnNode == nil || (d.OnNode != nil && o.OnNode != nil && d.OnNode.Equal(*o.OnNode))
+	logEq := d.Log == nil && o.Log == nil ||
+		(d.Log != nil && o.Log != nil && d.Log.Equal(*o.Log))
+	onnodeEq := d.OnNode == nil && o.OnNode == nil ||
+		(d.OnNode != nil && o.OnNode != nil && d.OnNode.Equal(*o.OnNode))
 
 	return d.Summary.Equal(o.Summary) &&
 		d.Active == o.Active &&

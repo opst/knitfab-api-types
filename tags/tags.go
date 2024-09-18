@@ -20,6 +20,9 @@ const (
 	ValueKnitTransientProcessing string = "processing"
 )
 
+// Tag represents Tag for Data and Plan input/output.
+//
+// To make this type from user inputted value, use Tag.Parse method.
 type Tag struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
@@ -45,7 +48,7 @@ func (a Tag) Equal(b Tag) bool {
 		vA.Equiv(vB)
 }
 
-// parse string value as Tag
+// parse and validation string value as Tag
 //
 // # Args
 //
@@ -79,8 +82,20 @@ func (t *Tag) Parse(s string) error {
 	return nil
 }
 
+// UserTag represents user specified Tag for Data and Plan input/output.
+//
+// To make this type from user inputted value, use UserTag.Parse method or Tag.AsUserTag method.
 type UserTag Tag
 
+// AsUserTag returns true if the tag is not system tag.
+//
+// # Args
+//
+// - ut: UserTag to be filled.
+//
+// # Returns
+//
+// - bool: true if the tag is not system tag.
 func (t Tag) AsUserTag(ut *UserTag) bool {
 	if strings.HasPrefix(t.Key, SystemTagPrefix) {
 		return false
@@ -137,7 +152,7 @@ func (ut Tag) MarshalYAML() (interface{}, error) {
 	return n, nil
 }
 
-// parse string value as UserTag
+// parse and validation string value as UserTag
 //
 // # Args
 //
@@ -190,6 +205,7 @@ func (t *Tag) unarshal(dat map[string]interface{}) error {
 
 	return nil
 }
+
 func (ut *UserTag) UnmarshalJSON(data []byte) error {
 	t := &Tag{}
 	if err := t.UnmarshalJSON(data); err != nil {

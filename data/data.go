@@ -29,11 +29,20 @@ func (s *Summary) Equal(o *Summary) bool {
 //
 // - GET  /api/data/{knitId} : as binary stream (Content-Type: application/octet-stream)
 type Detail struct {
-	KnitId      string        `json:"knitId"`
-	Tags        []tags.Tag    `json:"tags"`
-	Upstream    AssignedTo    `json:"upstream"`
-	Downstreams []AssignedTo  `json:"downstreams"`
-	Nomination  []NominatedBy `json:"nomination"`
+	// KnitId is the id of the Data.
+	KnitId string `json:"knitId"`
+
+	// Tags are the tags of the Data.
+	Tags []tags.Tag `json:"tags"`
+
+	// Upstream is the upsteram Run and its mountpoint outputs this Data.
+	Upstream AssignedTo `json:"upstream"`
+
+	// Downstreams are the downstream Runs and their mountpoint inputs this Data.
+	Downstreams []AssignedTo `json:"downstreams"`
+
+	// Nomination is the nominated Plan and its mountpoint can inputs this Data.
+	Nomination []NominatedBy `json:"nomination"`
 }
 
 func (d Detail) Equal(o Detail) bool {
