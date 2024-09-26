@@ -147,6 +147,11 @@ type Detail struct {
 
 	// Resources is the resource limits and requiremnts of the plan.
 	Resources Resources `json:"resources,omitempty"`
+
+	// ServiceAccount is the ServiceAccount name of the plan.
+	//
+	// Workers of the Run based this Plan will run with this ServiceAccount.
+	ServiceAccount string `json:"service_account,omitempty"`
 }
 
 func (d Detail) Equal(o Detail) bool {
@@ -157,7 +162,9 @@ func (d Detail) Equal(o Detail) bool {
 
 	return d.Summary.Equal(o.Summary) &&
 		d.Active == o.Active &&
+		d.ServiceAccount == o.ServiceAccount &&
 		logEq && onnodeEq &&
+		cmp.MapEqual(d.Resources, o.Resources) &&
 		cmp.SliceEqualUnordered(d.Inputs, o.Inputs) &&
 		cmp.SliceEqualUnordered(d.Outputs, o.Outputs)
 }
@@ -308,13 +315,14 @@ func (r *Resources) UnmarshalJSON(b []byte) error {
 //
 // - POST /api/plans/
 type PlanSpec struct {
-	Image     Image        `json:"image" yaml:"image"`
-	Inputs    []Mountpoint `json:"inputs" yaml:"inputs"`
-	Outputs   []Mountpoint `json:"outputs" yaml:"outputs"`
-	Log       *LogPoint    `json:"log,omitempty" yaml:"log,omitempty"`
-	OnNode    *OnNode      `json:"on_node,omitempty" yaml:"on_node,omitempty"`
-	Resources Resources    `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Active    *bool        `json:"active" yaml:"active,omitempty"`
+	Image          Image        `json:"image" yaml:"image"`
+	Inputs         []Mountpoint `json:"inputs" yaml:"inputs"`
+	Outputs        []Mountpoint `json:"outputs" yaml:"outputs"`
+	Log            *LogPoint    `json:"log,omitempty" yaml:"log,omitempty"`
+	OnNode         *OnNode      `json:"on_node,omitempty" yaml:"on_node,omitempty"`
+	Resources      Resources    `json:"resources,omitempty" yaml:"resources,omitempty"`
+	ServiceAccount string       `json:"service_account,omitempty" yaml:"service_account,omitempty"`
+	Active         *bool        `json:"active" yaml:"active,omitempty"`
 }
 
 func (ps PlanSpec) Equal(o PlanSpec) bool {
@@ -324,6 +332,7 @@ func (ps PlanSpec) Equal(o PlanSpec) bool {
 
 	return ps.Image.Equal(&o.Image) &&
 		logEq && onNodeEq && activeEq &&
+		ps.ServiceAccount == o.ServiceAccount &&
 		cmp.MapEqual(ps.Resources, o.Resources) &&
 		cmp.SliceEqualUnordered(ps.Inputs, o.Inputs) &&
 		cmp.SliceEqualUnordered(ps.Outputs, o.Outputs)
@@ -339,4 +348,9 @@ type ResourceLimitChange struct {
 	//
 	// If same type Set and Unset, Unset is affected.
 	Unset []string `json:"unset,omitempty" yaml:"unset,omitempty"`
+}
+
+// SetServiceccount declares new ServiceAccount name of a Plan.
+type SetServiceAccount struct {
+	ServiceAccount string `json:"service_account" yaml:"service_account"`
 }
