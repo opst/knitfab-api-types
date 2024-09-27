@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -26,6 +27,11 @@ type Summary struct {
 	//
 	// This is exclusive with Image, and used only for the system-builtin Plan with no image.
 	Name string `json:"name,omitempty"`
+
+	// Annotations are the annotations of the Plan.
+	//
+	// In JSON format, it is a list of strings in the form of "key=value".
+	Annotations Annotations `json:"annotations,omitempty"`
 }
 
 func (s Summary) Equal(o Summary) bool {
@@ -108,6 +114,52 @@ func (i *Image) UnmarshalJSON(b []byte) error {
 
 func (i *Image) String() string {
 	return i.marshal()
+}
+
+type Annotations []Annotation
+
+func (ans Annotations) Equal(o Annotations) bool {
+	return cmp.SliceEqualUnordered(ans, o)
+}
+
+type Annotation struct {
+	Key   string
+	Value string
+}
+
+func (an Annotation) Equal(o Annotation) bool {
+	return an.Key == o.Key && an.Value == o.Value
+}
+
+func (an Annotation) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s=%s"`, an.Key, an.Value)), nil
+}
+
+func (an *Annotation) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+
+	k, v, ok := strings.Cut(s, "=")
+	if !ok {
+		return fmt.Errorf("annotation format error (should be key=value): %s", s)
+	}
+
+	an.Key = k
+	an.Value = v
+	return nil
+}
+
+func (ans Annotations) MarshalJSON() ([]byte, error) {
+	_ans := append([]Annotation{}, ans...)
+	slices.SortFunc(_ans, func(i, j Annotation) int {
+		if c := strings.Compare(i.Key, j.Key); c != 0 {
+			return c
+		}
+		return strings.Compare(i.Value, j.Value)
+	})
+	return json.Marshal(_ans)
 }
 
 // Detail is the format for the response body from Knitfab APIs below:
@@ -315,6 +367,13 @@ func (r *Resources) UnmarshalJSON(b []byte) error {
 //
 // - POST /api/plans/
 type PlanSpec struct {
+	// Annotations are the annotations of the Plan.
+	//
+	// In JSON format, it is a list of strings in the form of "key=value".
+	//
+	// If same key is set multiple times, the last one is used.
+	Annotations Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+
 	Image          Image        `json:"image" yaml:"image"`
 	Inputs         []Mountpoint `json:"inputs" yaml:"inputs"`
 	Outputs        []Mountpoint `json:"outputs" yaml:"outputs"`
@@ -330,7 +389,8 @@ func (ps PlanSpec) Equal(o PlanSpec) bool {
 	logEq := ps.Log == nil && o.Log == nil || (ps.Log != nil && o.Log != nil && ps.Log.Equal(*o.Log))
 	onNodeEq := ps.OnNode == nil && o.OnNode == nil || (ps.OnNode != nil && o.OnNode != nil && ps.OnNode.Equal(*o.OnNode))
 
-	return ps.Image.Equal(&o.Image) &&
+	return ps.Annotations.Equal(o.Annotations) &&
+		ps.Image.Equal(&o.Image) &&
 		logEq && onNodeEq && activeEq &&
 		ps.ServiceAccount == o.ServiceAccount &&
 		cmp.MapEqual(ps.Resources, o.Resources) &&
@@ -353,4 +413,18 @@ type ResourceLimitChange struct {
 // SetServiceccount declares new ServiceAccount name of a Plan.
 type SetServiceAccount struct {
 	ServiceAccount string `json:"service_account" yaml:"service_account"`
+}
+
+// AnnotationChange is a changeset of Annotations of a Plan.
+//
+// Knitfab WebAPI applies Remove first, then Add.
+type AnnotationChange struct {
+	// Annotations to be added.
+	//
+	// If the Plan to be annotated already has the key, the value is updated.
+	// If same key is set multiple times, the last one is used.
+	Add Annotations `json:"add,omitempty" yaml:"add,omitempty"`
+
+	// Keys of Annotations to be removed.
+	Remove Annotations `json:"remove,omitempty" yaml:"remove,omitempty"`
 }

@@ -25,7 +25,25 @@ A:
 	return len(b) == 0
 }
 
+func SliceEqual[T interface{ Equal(T) bool }](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, x := range a {
+		if !x.Equal(b[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func MapEqual[K comparable, V interface{ Equal(V) bool }](a, b map[K]V) bool {
+	return MapEqualWith(a, b, V.Equal)
+}
+
+func MapEqualWith[K comparable, V any](a, b map[K]V, pred func(a, b V) bool) bool {
 	if len(a) != len(b) {
 		return false
 	}
@@ -35,7 +53,7 @@ func MapEqual[K comparable, V interface{ Equal(V) bool }](a, b map[K]V) bool {
 
 	for k, va := range a {
 		vb, ok := b[k]
-		if !ok || !va.Equal(vb) {
+		if !ok || !pred(va, vb) {
 			return false
 		}
 		delete(b, k)
