@@ -37,6 +37,7 @@ type Summary struct {
 func (s Summary) Equal(o Summary) bool {
 	return s.PlanId == o.PlanId &&
 		s.Image.Equal(o.Image) &&
+		s.Annotations.Equal(o.Annotations) &&
 		s.Name == o.Name
 }
 
