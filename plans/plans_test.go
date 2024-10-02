@@ -231,3 +231,112 @@ func TestAnnotations_marshalling(t *testing.T) {
 		},
 	))
 }
+
+func TestAnnotation_unmarshal_json(t *testing.T) {
+	type When struct {
+		source string
+	}
+
+	type Then struct {
+		want      plans.Annotations
+		wantError bool
+	}
+
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			var got plans.Annotations
+			err := json.Unmarshal([]byte(when.source), &got)
+
+			if then.wantError {
+				if err == nil {
+					t.Error("error is expected, but got nil")
+				}
+				return
+			} else if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !cmp.SliceEqualUnordered(got, then.want) {
+				t.Errorf("unexpected result: json.Unmarshal(%s) --> %v", when.source, got)
+			}
+		}
+	}
+
+	t.Run("empty", theory(
+		When{source: "[]"},
+		Then{want: plans.Annotations{}},
+	))
+
+	t.Run("single", theory(
+		When{source: `["key=value"]`},
+		Then{want: plans.Annotations{{Key: "key", Value: "value"}}},
+	))
+
+	t.Run("multiple", theory(
+		When{source: `["key=value","key2=value2"]`},
+		Then{want: plans.Annotations{
+			{Key: "key", Value: "value"},
+			{Key: "key2", Value: "value2"},
+		}},
+	))
+
+	t.Run("invalid", theory(
+		When{source: `[{"key": "value"}]`},
+		Then{wantError: true},
+	))
+}
+
+func TestAnnotation_unmarshal_yaml(t *testing.T) {
+	type When struct {
+		source string
+	}
+
+	type Then struct {
+		want      plans.Annotations
+		wantError bool
+	}
+
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			var got plans.Annotations
+			err := yaml.Unmarshal([]byte(when.source), &got)
+
+			if then.wantError {
+				if err == nil {
+					t.Error("error is expected, but got nil")
+				}
+				return
+			} else if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if !cmp.SliceEqualUnordered(got, then.want) {
+				t.Errorf("unexpected result: json.Unmarshal(%s) --> %v", when.source, got)
+			}
+		}
+	}
+
+	t.Run("empty", theory(
+		When{source: "[]"},
+		Then{want: plans.Annotations{}},
+	))
+
+	t.Run("single", theory(
+		When{source: `- "key=value"`},
+		Then{want: plans.Annotations{{Key: "key", Value: "value"}}},
+	))
+
+	t.Run("multiple", theory(
+		When{source: `- "key=value"
+- "key2=value2"`},
+		Then{want: plans.Annotations{
+			{Key: "key", Value: "value"},
+			{Key: "key2", Value: "value2"},
+		}},
+	))
+
+	t.Run("invalid", theory(
+		When{source: `- "key": "value"`},
+		Then{wantError: true},
+	))
+}
