@@ -123,9 +123,28 @@ func (ans Annotations) Equal(o Annotations) bool {
 	return cmp.SliceEqualUnordered(ans, o)
 }
 
+func (ans Annotations) marshal() []Annotation {
+	_ans := append([]Annotation{}, ans...)
+	slices.SortFunc(_ans, func(i, j Annotation) int {
+		if c := strings.Compare(i.Key, j.Key); c != 0 {
+			return c
+		}
+		return strings.Compare(i.Value, j.Value)
+	})
+	return _ans
+}
+
+func (ans Annotations) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ans.marshal())
+}
+
 type Annotation struct {
 	Key   string
 	Value string
+}
+
+func (an Annotation) String() string {
+	return fmt.Sprintf("%s=%s", an.Key, an.Value)
 }
 
 func (an Annotation) Equal(o Annotation) bool {
@@ -136,31 +155,41 @@ func (an Annotation) MarshalJSON() ([]byte, error) {
 	return []byte(fmt.Sprintf(`"%s=%s"`, an.Key, an.Value)), nil
 }
 
-func (an *Annotation) UnmarshalJSON(b []byte) error {
-	var s string
-	if err := json.Unmarshal(b, &s); err != nil {
-		return err
+func (an Annotation) MarshalYAML() (interface{}, error) {
+	n := yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: an.String(),
+		Style: yaml.DoubleQuotedStyle,
 	}
+	return n, nil
+}
 
+func (an *Annotation) parse(s string) error {
 	k, v, ok := strings.Cut(s, "=")
 	if !ok {
 		return fmt.Errorf("annotation format error (should be key=value): %s", s)
 	}
 
-	an.Key = k
-	an.Value = v
+	an.Key = strings.TrimSpace(k)
+	an.Value = strings.TrimSpace(v)
 	return nil
 }
 
-func (ans Annotations) MarshalJSON() ([]byte, error) {
-	_ans := append([]Annotation{}, ans...)
-	slices.SortFunc(_ans, func(i, j Annotation) int {
-		if c := strings.Compare(i.Key, j.Key); c != 0 {
-			return c
-		}
-		return strings.Compare(i.Value, j.Value)
-	})
-	return json.Marshal(_ans)
+func (an *Annotation) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	return an.parse(s)
+}
+
+func (an *Annotation) UnmarshalYAML(node *yaml.Node) error {
+	var s string
+	if err := node.Decode(&s); err != nil {
+		return err
+	}
+
+	return an.parse(s)
 }
 
 // Detail is the format for the response body from Knitfab APIs below:
