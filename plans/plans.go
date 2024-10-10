@@ -459,4 +459,6 @@ type AnnotationChange struct {
 
 	// Keys of Annotations to be removed.
 	Remove Annotations `json:"remove,omitempty" yaml:"remove,omitempty"`
+
+	RemoveKey []string `json:"remove_key,omitempty" yaml:"remove_key,omitempty"`
 }

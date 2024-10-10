@@ -25,6 +25,29 @@ A:
 	return len(b) == 0
 }
 
+func SliceEqEqUnordered[T comparable](a, b []T) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	// make a copy of b
+	b = append([]T(nil), b...)
+
+A:
+	for _, x := range a {
+		for i, y := range b {
+			if x == y {
+				// remove y from b
+				b = append(b[:i], b[i+1:]...)
+				continue A
+			}
+		}
+		return false
+	}
+
+	return len(b) == 0
+}
+
 func SliceEqual[T interface{ Equal(T) bool }](a, b []T) bool {
 	if len(a) != len(b) {
 		return false

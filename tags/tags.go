@@ -231,9 +231,37 @@ func (u UserTag) Equal(o UserTag) bool {
 type Change struct {
 	AddTags    []UserTag `json:"add"`
 	RemoveTags []UserTag `json:"remove"`
+	RemoveKey  []string  `json:"remove_key"`
+}
+
+func (c *Change) UnmarshalJSON(data []byte) error {
+
+	type raw struct {
+		AddTags    []UserTag `json:"add"`
+		RemoveTags []UserTag `json:"remove"`
+		RemoveKey  []string  `json:"remove_key"`
+	}
+
+	var r raw
+	if err := json.Unmarshal(data, &r); err != nil {
+		return err
+	}
+
+	for _, rk := range r.RemoveKey {
+		if strings.HasPrefix(rk, SystemTagPrefix) {
+			return fmt.Errorf(`tag key "%s..." is reserved for system tags. not removable.`, SystemTagPrefix)
+		}
+	}
+
+	c.AddTags = r.AddTags
+	c.RemoveTags = r.RemoveTags
+	c.RemoveKey = r.RemoveKey
+	return nil
 }
 
 func (c *Change) Equal(o *Change) bool {
 
-	return cmp.SliceEqualUnordered(c.AddTags, o.AddTags) && cmp.SliceEqualUnordered(c.RemoveTags, o.RemoveTags)
+	return cmp.SliceEqualUnordered(c.AddTags, o.AddTags) &&
+		cmp.SliceEqualUnordered(c.RemoveTags, o.RemoveTags) &&
+		cmp.SliceEqEqUnordered(c.RemoveKey, o.RemoveKey)
 }
