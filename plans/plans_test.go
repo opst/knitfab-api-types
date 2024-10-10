@@ -208,6 +208,17 @@ func TestAnnotations_marshalling(t *testing.T) {
 		},
 	))
 
+	t.Run("contains quote", theory(
+		When{
+			Annotations: plans.Annotations{
+				{Key: `"key"`, Value: `"value"`},
+			},
+		},
+		Then{
+			StringExpression: `["\"key\"=\"value\""]`,
+		},
+	))
+
 	t.Run("multiple", theory(
 		When{
 			Annotations: plans.Annotations{
