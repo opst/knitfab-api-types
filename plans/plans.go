@@ -135,7 +135,8 @@ func (ans Annotations) marshal() []Annotation {
 }
 
 func (ans Annotations) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ans.marshal())
+	s := ans.marshal()
+	return json.Marshal(s)
 }
 
 type Annotation struct {
@@ -152,7 +153,8 @@ func (an Annotation) Equal(o Annotation) bool {
 }
 
 func (an Annotation) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf(`"%s=%s"`, an.Key, an.Value)), nil
+	s := an.String()
+	return json.Marshal(s)
 }
 
 func (an Annotation) MarshalYAML() (interface{}, error) {
