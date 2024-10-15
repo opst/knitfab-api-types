@@ -23,6 +23,12 @@ type Summary struct {
 	// This is exclusive with Name.
 	Image *Image `json:"image,omitempty"`
 
+	// Entrypoint is the entrypoint of the container of the Plan.
+	Entrypoint []string `json:"entrypoint,omitempty"`
+
+	// Args are the arguments of the container of the Plan.
+	Args []string `json:"args,omitempty"`
+
 	// Name is the name of the Plan.
 	//
 	// This is exclusive with Image, and used only for the system-builtin Plan with no image.
@@ -37,8 +43,10 @@ type Summary struct {
 func (s Summary) Equal(o Summary) bool {
 	return s.PlanId == o.PlanId &&
 		s.Image.Equal(o.Image) &&
-		s.Annotations.Equal(o.Annotations) &&
-		s.Name == o.Name
+		cmp.SliceEqEq(s.Entrypoint, o.Entrypoint) &&
+		cmp.SliceEqEq(s.Args, o.Args) &&
+		s.Name == o.Name &&
+		s.Annotations.Equal(o.Annotations)
 }
 
 type Image struct {
@@ -406,28 +414,74 @@ type PlanSpec struct {
 	// If same key is set multiple times, the last one is used.
 	Annotations Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty"`
 
-	Image          Image        `json:"image" yaml:"image"`
-	Inputs         []Mountpoint `json:"inputs" yaml:"inputs"`
-	Outputs        []Mountpoint `json:"outputs" yaml:"outputs"`
-	Log            *LogPoint    `json:"log,omitempty" yaml:"log,omitempty"`
-	OnNode         *OnNode      `json:"on_node,omitempty" yaml:"on_node,omitempty"`
-	Resources      Resources    `json:"resources,omitempty" yaml:"resources,omitempty"`
-	ServiceAccount string       `json:"service_account,omitempty" yaml:"service_account,omitempty"`
-	Active         *bool        `json:"active" yaml:"active,omitempty"`
+	// Image is the container image of the Plan.
+	Image Image `json:"image" yaml:"image"`
+
+	// Entrypoint is the entrypoint of the container of the Plan.
+	Entrypoint []string `json:"entrypoint,omitempty" yaml:"entrypoint,omitempty"`
+
+	// Args are the arguments of the container of the Plan.
+	Args []string `json:"args,omitempty" yaml:"args,omitempty"`
+
+	// Inputs are the input mountpoints of the plan.
+	//
+	// These describes "where should input Data be mounted to the container" and
+	// "what tags should be attached to the input Data".
+	//
+	// When Knitfab detect the Data with the tags, it will be mounted to the container and started as a Run.
+	Inputs []Mountpoint `json:"inputs" yaml:"inputs"`
+
+	// Outputs are the output mountpoints of the plan.
+	//
+	// These describes "where should output Data be mounted to the container" and
+	// "what tags will be attached to the output Data".
+	//
+	// On the Run start, Knitfab will create the mountpoints and attach the tags to the output Data.
+	Outputs []Mountpoint `json:"outputs" yaml:"outputs"`
+
+	// Log is the log point of the plan.
+	//
+	// "Log" means a Data containing standard output and standard error of the container.
+	// If nil, the plan does not record logs.
+	//
+	// As Outputs, Log can have Tags which will be attached to the log Data.
+	Log *LogPoint `json:"log,omitempty" yaml:"log,omitempty"`
+
+	// OnNode is the node affinity/torelance of the plan.
+	//
+	// If nil, the plan does not have node affinity/torelance.
+	OnNode *OnNode `json:"on_node,omitempty" yaml:"on_node,omitempty"`
+
+	// Resources is the conputational resource limits and requiremnts of the plan.
+	Resources Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+
+	// ServiceAccount is the Kubernetes ServiceAccount name of the plan.
+	ServiceAccount string `json:"service_account,omitempty" yaml:"service_account,omitempty"`
+
+	// Active shows Plan's activeness.
+	//
+	// If true or nil, the Plan is active and new Runs based the Plan can be started.
+	//
+	// If false, the Plan is inactive and new Runs based the Plan are created but suspended to start.
+	Active *bool `json:"active" yaml:"active,omitempty"`
 }
 
 func (ps PlanSpec) Equal(o PlanSpec) bool {
-	activeEq := ps.Active == nil && o.Active == nil || (ps.Active != nil && o.Active != nil && *ps.Active == *o.Active)
 	logEq := ps.Log == nil && o.Log == nil || (ps.Log != nil && o.Log != nil && ps.Log.Equal(*o.Log))
 	onNodeEq := ps.OnNode == nil && o.OnNode == nil || (ps.OnNode != nil && o.OnNode != nil && ps.OnNode.Equal(*o.OnNode))
+	activeEq := ps.Active == nil && o.Active == nil || (ps.Active != nil && o.Active != nil && *ps.Active == *o.Active)
 
 	return ps.Annotations.Equal(o.Annotations) &&
 		ps.Image.Equal(&o.Image) &&
-		logEq && onNodeEq && activeEq &&
-		ps.ServiceAccount == o.ServiceAccount &&
-		cmp.MapEqual(ps.Resources, o.Resources) &&
+		cmp.SliceEqEq(ps.Entrypoint, o.Entrypoint) &&
+		cmp.SliceEqEq(ps.Args, o.Args) &&
 		cmp.SliceEqualUnordered(ps.Inputs, o.Inputs) &&
-		cmp.SliceEqualUnordered(ps.Outputs, o.Outputs)
+		cmp.SliceEqualUnordered(ps.Outputs, o.Outputs) &&
+		logEq &&
+		onNodeEq &&
+		cmp.MapEqual(ps.Resources, o.Resources) &&
+		ps.ServiceAccount == o.ServiceAccount &&
+		activeEq
 }
 
 // ResourceLimitChange is a change of resource limit of plan.

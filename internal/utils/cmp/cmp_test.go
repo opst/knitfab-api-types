@@ -146,6 +146,46 @@ func TestSliceEqual(t *testing.T) {
 	))
 }
 
+func TestSliceEqEq(t *testing.T) {
+	type When struct {
+		A []int
+		B []int
+	}
+	type Then struct {
+		Want bool
+	}
+
+	theory := func(when When, then Then) func(t *testing.T) {
+		return func(t *testing.T) {
+			got := cmp.SliceEqEq(when.A, when.B)
+			if got != then.Want {
+				t.Errorf("got %v, want %v", got, then.Want)
+			}
+		}
+	}
+
+	t.Run("when A and B are empty", theory(
+		When{A: []int{}, B: []int{}},
+		Then{Want: true},
+	))
+	t.Run("when A and B are the same", theory(
+		When{A: []int{1, 2, 3}, B: []int{1, 2, 3}},
+		Then{Want: true},
+	))
+	t.Run("when A and B are different", theory(
+		When{A: []int{1, 2, 3}, B: []int{1, 2, 4}},
+		Then{Want: false},
+	))
+	t.Run("when A and B have different length", theory(
+		When{A: []int{1, 2}, B: []int{1, 2, 3}},
+		Then{Want: false},
+	))
+	t.Run("when A and B have same elements but in different order", theory(
+		When{A: []int{1, 2, 3}, B: []int{3, 2, 1}},
+		Then{Want: false},
+	))
+}
+
 func TestMapEqual(t *testing.T) {
 	type When struct {
 		A map[string]Int
