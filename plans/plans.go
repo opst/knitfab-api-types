@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -22,16 +23,30 @@ type Summary struct {
 	// This is exclusive with Name.
 	Image *Image `json:"image,omitempty"`
 
+	// Entrypoint is the entrypoint of the container of the Plan.
+	Entrypoint []string `json:"entrypoint,omitempty"`
+
+	// Args are the arguments of the container of the Plan.
+	Args []string `json:"args,omitempty"`
+
 	// Name is the name of the Plan.
 	//
 	// This is exclusive with Image, and used only for the system-builtin Plan with no image.
 	Name string `json:"name,omitempty"`
+
+	// Annotations are the annotations of the Plan.
+	//
+	// In JSON format, it is a list of strings in the form of "key=value".
+	Annotations Annotations `json:"annotations,omitempty"`
 }
 
 func (s Summary) Equal(o Summary) bool {
 	return s.PlanId == o.PlanId &&
 		s.Image.Equal(o.Image) &&
-		s.Name == o.Name
+		cmp.SliceEqEq(s.Entrypoint, o.Entrypoint) &&
+		cmp.SliceEqEq(s.Args, o.Args) &&
+		s.Name == o.Name &&
+		s.Annotations.Equal(o.Annotations)
 }
 
 type Image struct {
@@ -110,6 +125,83 @@ func (i *Image) String() string {
 	return i.marshal()
 }
 
+type Annotations []Annotation
+
+func (ans Annotations) Equal(o Annotations) bool {
+	return cmp.SliceEqualUnordered(ans, o)
+}
+
+func (ans Annotations) marshal() []Annotation {
+	_ans := append([]Annotation{}, ans...)
+	slices.SortFunc(_ans, func(i, j Annotation) int {
+		if c := strings.Compare(i.Key, j.Key); c != 0 {
+			return c
+		}
+		return strings.Compare(i.Value, j.Value)
+	})
+	return _ans
+}
+
+func (ans Annotations) MarshalJSON() ([]byte, error) {
+	s := ans.marshal()
+	return json.Marshal(s)
+}
+
+type Annotation struct {
+	Key   string
+	Value string
+}
+
+func (an Annotation) String() string {
+	return fmt.Sprintf("%s=%s", an.Key, an.Value)
+}
+
+func (an Annotation) Equal(o Annotation) bool {
+	return an.Key == o.Key && an.Value == o.Value
+}
+
+func (an Annotation) MarshalJSON() ([]byte, error) {
+	s := an.String()
+	return json.Marshal(s)
+}
+
+func (an Annotation) MarshalYAML() (interface{}, error) {
+	n := yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: an.String(),
+		Style: yaml.DoubleQuotedStyle,
+	}
+	return n, nil
+}
+
+func (an *Annotation) parse(s string) error {
+	k, v, ok := strings.Cut(s, "=")
+	if !ok {
+		return fmt.Errorf("annotation format error (should be key=value): %s", s)
+	}
+
+	an.Key = strings.TrimSpace(k)
+	an.Value = strings.TrimSpace(v)
+	return nil
+}
+
+func (an *Annotation) UnmarshalJSON(b []byte) error {
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	return an.parse(s)
+}
+
+func (an *Annotation) UnmarshalYAML(node *yaml.Node) error {
+	var s string
+	if err := node.Decode(&s); err != nil {
+		return err
+	}
+
+	return an.parse(s)
+}
+
 // Detail is the format for the response body from Knitfab APIs below:
 //
 // - GET  /api/plans/ (as list)
@@ -147,6 +239,11 @@ type Detail struct {
 
 	// Resources is the resource limits and requiremnts of the plan.
 	Resources Resources `json:"resources,omitempty"`
+
+	// ServiceAccount is the ServiceAccount name of the plan.
+	//
+	// Workers of the Run based this Plan will run with this ServiceAccount.
+	ServiceAccount string `json:"service_account,omitempty"`
 }
 
 func (d Detail) Equal(o Detail) bool {
@@ -157,7 +254,9 @@ func (d Detail) Equal(o Detail) bool {
 
 	return d.Summary.Equal(o.Summary) &&
 		d.Active == o.Active &&
+		d.ServiceAccount == o.ServiceAccount &&
 		logEq && onnodeEq &&
+		cmp.MapEqual(d.Resources, o.Resources) &&
 		cmp.SliceEqualUnordered(d.Inputs, o.Inputs) &&
 		cmp.SliceEqualUnordered(d.Outputs, o.Outputs)
 }
@@ -308,25 +407,81 @@ func (r *Resources) UnmarshalJSON(b []byte) error {
 //
 // - POST /api/plans/
 type PlanSpec struct {
-	Image     Image        `json:"image" yaml:"image"`
-	Inputs    []Mountpoint `json:"inputs" yaml:"inputs"`
-	Outputs   []Mountpoint `json:"outputs" yaml:"outputs"`
-	Log       *LogPoint    `json:"log,omitempty" yaml:"log,omitempty"`
-	OnNode    *OnNode      `json:"on_node,omitempty" yaml:"on_node,omitempty"`
-	Resources Resources    `json:"resources,omitempty" yaml:"resources,omitempty"`
-	Active    *bool        `json:"active" yaml:"active,omitempty"`
+	// Annotations are the annotations of the Plan.
+	//
+	// In JSON format, it is a list of strings in the form of "key=value".
+	//
+	// If same key is set multiple times, the last one is used.
+	Annotations Annotations `json:"annotations,omitempty" yaml:"annotations,omitempty"`
+
+	// Image is the container image of the Plan.
+	Image Image `json:"image" yaml:"image"`
+
+	// Entrypoint is the entrypoint of the container of the Plan.
+	Entrypoint []string `json:"entrypoint,omitempty" yaml:"entrypoint,omitempty"`
+
+	// Args are the arguments of the container of the Plan.
+	Args []string `json:"args,omitempty" yaml:"args,omitempty"`
+
+	// Inputs are the input mountpoints of the plan.
+	//
+	// These describes "where should input Data be mounted to the container" and
+	// "what tags should be attached to the input Data".
+	//
+	// When Knitfab detect the Data with the tags, it will be mounted to the container and started as a Run.
+	Inputs []Mountpoint `json:"inputs" yaml:"inputs"`
+
+	// Outputs are the output mountpoints of the plan.
+	//
+	// These describes "where should output Data be mounted to the container" and
+	// "what tags will be attached to the output Data".
+	//
+	// On the Run start, Knitfab will create the mountpoints and attach the tags to the output Data.
+	Outputs []Mountpoint `json:"outputs" yaml:"outputs"`
+
+	// Log is the log point of the plan.
+	//
+	// "Log" means a Data containing standard output and standard error of the container.
+	// If nil, the plan does not record logs.
+	//
+	// As Outputs, Log can have Tags which will be attached to the log Data.
+	Log *LogPoint `json:"log,omitempty" yaml:"log,omitempty"`
+
+	// OnNode is the node affinity/torelance of the plan.
+	//
+	// If nil, the plan does not have node affinity/torelance.
+	OnNode *OnNode `json:"on_node,omitempty" yaml:"on_node,omitempty"`
+
+	// Resources is the conputational resource limits and requiremnts of the plan.
+	Resources Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+
+	// ServiceAccount is the Kubernetes ServiceAccount name of the plan.
+	ServiceAccount string `json:"service_account,omitempty" yaml:"service_account,omitempty"`
+
+	// Active shows Plan's activeness.
+	//
+	// If true or nil, the Plan is active and new Runs based the Plan can be started.
+	//
+	// If false, the Plan is inactive and new Runs based the Plan are created but suspended to start.
+	Active *bool `json:"active" yaml:"active,omitempty"`
 }
 
 func (ps PlanSpec) Equal(o PlanSpec) bool {
-	activeEq := ps.Active == nil && o.Active == nil || (ps.Active != nil && o.Active != nil && *ps.Active == *o.Active)
 	logEq := ps.Log == nil && o.Log == nil || (ps.Log != nil && o.Log != nil && ps.Log.Equal(*o.Log))
 	onNodeEq := ps.OnNode == nil && o.OnNode == nil || (ps.OnNode != nil && o.OnNode != nil && ps.OnNode.Equal(*o.OnNode))
+	activeEq := ps.Active == nil && o.Active == nil || (ps.Active != nil && o.Active != nil && *ps.Active == *o.Active)
 
-	return ps.Image.Equal(&o.Image) &&
-		logEq && onNodeEq && activeEq &&
-		cmp.MapEqual(ps.Resources, o.Resources) &&
+	return ps.Annotations.Equal(o.Annotations) &&
+		ps.Image.Equal(&o.Image) &&
+		cmp.SliceEqEq(ps.Entrypoint, o.Entrypoint) &&
+		cmp.SliceEqEq(ps.Args, o.Args) &&
 		cmp.SliceEqualUnordered(ps.Inputs, o.Inputs) &&
-		cmp.SliceEqualUnordered(ps.Outputs, o.Outputs)
+		cmp.SliceEqualUnordered(ps.Outputs, o.Outputs) &&
+		logEq &&
+		onNodeEq &&
+		cmp.MapEqual(ps.Resources, o.Resources) &&
+		ps.ServiceAccount == o.ServiceAccount &&
+		activeEq
 }
 
 // ResourceLimitChange is a change of resource limit of plan.
@@ -339,4 +494,25 @@ type ResourceLimitChange struct {
 	//
 	// If same type Set and Unset, Unset is affected.
 	Unset []string `json:"unset,omitempty" yaml:"unset,omitempty"`
+}
+
+// SetServiceccount declares new ServiceAccount name of a Plan.
+type SetServiceAccount struct {
+	ServiceAccount string `json:"service_account" yaml:"service_account"`
+}
+
+// AnnotationChange is a changeset of Annotations of a Plan.
+//
+// Knitfab WebAPI applies Remove first, then Add.
+type AnnotationChange struct {
+	// Annotations to be added.
+	//
+	// If the Plan to be annotated already has the key, the value is updated.
+	// If same key is set multiple times, the last one is used.
+	Add Annotations `json:"add,omitempty" yaml:"add,omitempty"`
+
+	// Keys of Annotations to be removed.
+	Remove Annotations `json:"remove,omitempty" yaml:"remove,omitempty"`
+
+	RemoveKey []string `json:"remove_key,omitempty" yaml:"remove_key,omitempty"`
 }
