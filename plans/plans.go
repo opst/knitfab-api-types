@@ -217,10 +217,10 @@ type Detail struct {
 	Summary
 
 	// Inputs are the input mountpoints of the plan.
-	Inputs []Mountpoint `json:"inputs"`
+	Inputs []Input `json:"inputs"`
 
 	// Outputs are the output mountpoints of the plan.
-	Outputs []Mountpoint `json:"outputs"`
+	Outputs []Output `json:"outputs"`
 
 	// Log is the log point of the plan.
 	//
@@ -261,8 +261,20 @@ func (d Detail) Equal(o Detail) bool {
 		cmp.SliceEqualUnordered(d.Outputs, o.Outputs)
 }
 
+// Mountpoint is the format for input/output mountpoints of a Plan.
 type Mountpoint struct {
-	Path string     `json:"path"`
+	// Path is the path of the mountpoint.
+	//
+	// This is the path in the container where the Data will be mounted
+	// when the Run starts.
+	Path string `json:"path"`
+
+	// Tags are the tags of the mountpoint.
+	//
+	// For input mountpoints, these are the required tags of the Data to be mounted.
+	// The Data with these all tags will be mounted to the Path when the Run starts.
+	//
+	// For output mountpoints, these are the tags to be attached to the Data mounted.
 	Tags []tags.Tag `json:"tags"`
 }
 
@@ -270,12 +282,55 @@ func (m Mountpoint) Equal(o Mountpoint) bool {
 	return m.Path == o.Path && cmp.SliceEqualUnordered(m.Tags, o.Tags)
 }
 
+// Dependency is the format for input/output dependencies of a Plan.
+type Dependency struct {
+	PlanId     string     `json:"planId"`
+	Mountpoint Mountpoint `json:"mountpoint"`
+}
+
+func (d Dependency) Equal(o Dependency) bool {
+	return d.PlanId == o.PlanId && d.Mountpoint.Equal(o.Mountpoint)
+}
+
+// Input is the format for input mountpoints of a Plan.
+type Input struct {
+	Mountpoint
+
+	// UpstreamCandidates are the upstream Plans and their output mountpoints
+	// whose output Data can be mounted to this input mountpoint.
+	UpstreamCandidates []Dependency `json:"upstream_candidates"`
+}
+
+func (i Input) Equal(o Input) bool {
+	return i.Mountpoint.Equal(o.Mountpoint) &&
+		cmp.SliceEqualUnordered(i.UpstreamCandidates, o.UpstreamCandidates)
+}
+
+// Output is the format for output mountpoints of a Plan.
+type Output struct {
+	Mountpoint
+
+	// DownstreamCandidates are the downstream Plans and their input mountpoints
+	// can be assigned with Data from this output.
+	DownstreamCandidates []Dependency `json:"downstream_candidates"`
+}
+
+func (o Output) Equal(oo Output) bool {
+	return o.Mountpoint.Equal(oo.Mountpoint) &&
+		cmp.SliceEqualUnordered(o.DownstreamCandidates, oo.DownstreamCandidates)
+}
+
 type LogPoint struct {
 	Tags []tags.Tag
+
+	// DownstreamCandidates are the downstream Plans and their input mountpoints
+	// can be assigned with Data from this output.
+	DownstreamCandidates []Dependency `json:"downstream_candidates"`
 }
 
 func (lp LogPoint) Equal(o LogPoint) bool {
-	return cmp.SliceEqualUnordered(lp.Tags, o.Tags)
+	return cmp.SliceEqualUnordered(lp.Tags, o.Tags) &&
+		cmp.SliceEqualUnordered(lp.DownstreamCandidates, o.DownstreamCandidates)
 }
 
 func (lp LogPoint) String() string {
