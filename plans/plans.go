@@ -347,31 +347,31 @@ func (d Downstream) Equal(o Downstream) bool {
 type Output struct {
 	Mountpoint
 
-	// Downstream are the downstream Plans and their input mountpoints
+	// Downstreams are the downstream Plans and their input mountpoints
 	// can be assigned with Data from this output.
-	Downstream []Downstream `json:"downstreams"`
+	Downstreams []Downstream `json:"downstreams"`
 }
 
 func (o Output) Equal(oo Output) bool {
 	return o.Mountpoint.Equal(oo.Mountpoint) &&
-		cmp.SliceEqualUnordered(o.Downstream, oo.Downstream)
+		cmp.SliceEqualUnordered(o.Downstreams, oo.Downstreams)
 }
 
 type Log struct {
 	LogPoint
 
-	// Downstream are the downstream Plans and their input mountpoints
+	// Downstreams are the downstream Plans and their input mountpoints
 	// can be assigned with Data from this output.
-	Downstream []Downstream `json:"downstream"`
+	Downstreams []Downstream `json:"downstreams"`
 }
 
 func (l Log) Equal(ol Log) bool {
 	return l.LogPoint.Equal(ol.LogPoint) &&
-		cmp.SliceEqualUnordered(l.Downstream, ol.Downstream)
+		cmp.SliceEqualUnordered(l.Downstreams, ol.Downstreams)
 }
 
 func (l Log) String() string {
-	return fmt.Sprintf("{LogPoint: %+v, Downstream: %+v}", l.LogPoint, l.Downstream)
+	return fmt.Sprintf("{LogPoint: %+v, Downstreams: %+v}", l.LogPoint, l.Downstreams)
 }
 
 type LogPoint struct {
