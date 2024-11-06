@@ -225,7 +225,7 @@ type Detail struct {
 	// Log is the log point of the plan.
 	//
 	// If nil, the plan does not record logs.
-	Log *LogPoint `json:"log,omitempty"`
+	Log *Log `json:"log,omitempty"`
 
 	// Active shows Plan's activeness.
 	//
@@ -289,13 +289,13 @@ type Upstream struct {
 
 	// Mountpoint represents the Output which is directt upstream.
 	//
-	// Iff IsLog is true, this is nil.
+	// Log and Mountpoint are exclusive.
 	Mountpoint *Mountpoint `json:"mountpoint,omitempty"`
 
-	// Log is true if the mountpoint is a log point.
+	// Log represents the Log which is direct upstream.
 	//
-	// Iff true, Mountpoint is nil.
-	Log bool `json:"is_log,omitempty"`
+	// Log and Mountpoint are exclusive.
+	Log *LogPoint `json:"log,omitempty"`
 }
 
 func (d Upstream) Equal(o Upstream) bool {
@@ -303,10 +303,17 @@ func (d Upstream) Equal(o Upstream) bool {
 		return false
 	}
 
+	if (d.Log == nil) != (o.Log == nil) {
+		return false
+	}
+
 	mountpointMatch := (d.Mountpoint == nil && o.Mountpoint == nil) ||
 		d.Mountpoint.Equal(*o.Mountpoint)
 
-	return d.PlanId == o.PlanId && mountpointMatch && d.Log == o.Log
+	logMatch := (d.Log == nil && o.Log == nil) ||
+		d.Log.Equal(*o.Log)
+
+	return d.PlanId == o.PlanId && mountpointMatch && logMatch
 }
 
 // Input is the format for input mountpoints of a Plan.
@@ -350,17 +357,29 @@ func (o Output) Equal(oo Output) bool {
 		cmp.SliceEqualUnordered(o.Downstream, oo.Downstream)
 }
 
+type Log struct {
+	LogPoint
+
+	// Downstream are the downstream Plans and their input mountpoints
+	// can be assigned with Data from this output.
+	Downstream []Downstream `json:"downstream"`
+}
+
+func (l Log) Equal(ol Log) bool {
+	return l.LogPoint.Equal(ol.LogPoint) &&
+		cmp.SliceEqualUnordered(l.Downstream, ol.Downstream)
+}
+
+func (l Log) String() string {
+	return fmt.Sprintf("{LogPoint: %+v, Downstream: %+v}", l.LogPoint, l.Downstream)
+}
+
 type LogPoint struct {
 	Tags []tags.Tag
-
-	// DownstreamCandidates are the downstream Plans and their input mountpoints
-	// can be assigned with Data from this output.
-	DownstreamCandidates []Upstream `json:"downstream_candidates"`
 }
 
 func (lp LogPoint) Equal(o LogPoint) bool {
-	return cmp.SliceEqualUnordered(lp.Tags, o.Tags) &&
-		cmp.SliceEqualUnordered(lp.DownstreamCandidates, o.DownstreamCandidates)
+	return cmp.SliceEqualUnordered(lp.Tags, o.Tags)
 }
 
 func (lp LogPoint) String() string {
