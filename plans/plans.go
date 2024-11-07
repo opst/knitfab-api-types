@@ -284,8 +284,7 @@ func (m Mountpoint) Equal(o Mountpoint) bool {
 
 // Upstream is the format for input dependencies of a Plan.
 type Upstream struct {
-	// PlanId is the id of the upstream Plan.
-	PlanId string `json:"planId"`
+	Summary
 
 	// Mountpoint represents the Output which is directt upstream.
 	//
@@ -332,8 +331,7 @@ func (i Input) Equal(o Input) bool {
 
 // Downstream is the format for output dependencies of a Plan.
 type Downstream struct {
-	// PlanId is the id of the downstream Plan.
-	PlanId string `json:"planId"`
+	Summary
 
 	// Mountpoint represents the Input which is direct downstream.
 	Mountpoint Mountpoint `json:"mountpoint"`
