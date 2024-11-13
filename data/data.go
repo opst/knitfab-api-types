@@ -53,10 +53,26 @@ func (d Detail) Equal(o Detail) bool {
 		cmp.SliceEqualUnordered(d.Nomination, o.Nomination)
 }
 
+// CreatedFrom represents the source of the data
+type CreatedFrom struct {
+	// Mountpoint is the mountpoint which created this Data.
+	//
+	// This and Log are mutually exclusive.
+	Mountpoint *plans.Mountpoint `json:"mountpoint,omitempty"`
+
+	// Log is the log point which created this Data.
+	//
+	// This and Mountpoint are mutually exclusive.
+	Log *plans.LogPoint `json:"log,omitempty"`
+
+	// Run is the Run which created this Data.
+	Run runs.Summary `json:"run"`
+}
+
 // assigment representation, looking from data
 type AssignedTo struct {
-	plans.Mountpoint
-	Run runs.Summary `json:"run"`
+	Mountpoint plans.Mountpoint `json:"mountpoint"`
+	Run        runs.Summary     `json:"run"`
 }
 
 func (a AssignedTo) Equal(o AssignedTo) bool {
