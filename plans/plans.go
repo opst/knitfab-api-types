@@ -284,16 +284,17 @@ func (m Mountpoint) Equal(o Mountpoint) bool {
 
 // Upstream is the format for input dependencies of a Plan.
 type Upstream struct {
-	Summary
+	// Plan is the upstream Plan.
+	Plan Summary `json:"plan"`
 
 	// Mountpoint represents the Output which is directt upstream.
 	//
-	// Log and Mountpoint are exclusive.
+	// Log and Mountpoint are mutually exclusive.
 	Mountpoint *Mountpoint `json:"mountpoint,omitempty"`
 
 	// Log represents the Log which is direct upstream.
 	//
-	// Log and Mountpoint are exclusive.
+	// Log and Mountpoint are mutually exclusive.
 	Log *LogPoint `json:"log,omitempty"`
 }
 
@@ -312,7 +313,7 @@ func (d Upstream) Equal(o Upstream) bool {
 	logMatch := (d.Log == nil && o.Log == nil) ||
 		d.Log.Equal(*o.Log)
 
-	return d.PlanId == o.PlanId && mountpointMatch && logMatch
+	return d.Plan.Equal(o.Plan) && mountpointMatch && logMatch
 }
 
 // Input is the format for input mountpoints of a Plan.
@@ -331,14 +332,15 @@ func (i Input) Equal(o Input) bool {
 
 // Downstream is the format for output dependencies of a Plan.
 type Downstream struct {
-	Summary
+	// Plan is the downstream Plan.
+	Plan Summary `json:"plan"`
 
 	// Mountpoint represents the Input which is direct downstream.
 	Mountpoint Mountpoint `json:"mountpoint"`
 }
 
 func (d Downstream) Equal(o Downstream) bool {
-	return d.PlanId == o.PlanId && d.Mountpoint.Equal(o.Mountpoint)
+	return d.Plan.Equal(o.Plan) && d.Mountpoint.Equal(o.Mountpoint)
 }
 
 // Output is the format for output mountpoints of a Plan.
