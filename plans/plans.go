@@ -375,7 +375,7 @@ func (l Log) String() string {
 }
 
 type LogPoint struct {
-	Tags []tags.Tag
+	Tags []tags.Tag `json:"tags"`
 }
 
 func (lp LogPoint) Equal(o LogPoint) bool {
