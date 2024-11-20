@@ -217,15 +217,15 @@ type Detail struct {
 	Summary
 
 	// Inputs are the input mountpoints of the plan.
-	Inputs []Mountpoint `json:"inputs"`
+	Inputs []Input `json:"inputs"`
 
 	// Outputs are the output mountpoints of the plan.
-	Outputs []Mountpoint `json:"outputs"`
+	Outputs []Output `json:"outputs"`
 
 	// Log is the log point of the plan.
 	//
 	// If nil, the plan does not record logs.
-	Log *LogPoint `json:"log,omitempty"`
+	Log *Log `json:"log,omitempty"`
 
 	// Active shows Plan's activeness.
 	//
@@ -261,8 +261,20 @@ func (d Detail) Equal(o Detail) bool {
 		cmp.SliceEqualUnordered(d.Outputs, o.Outputs)
 }
 
+// Mountpoint is the format for input/output mountpoints of a Plan.
 type Mountpoint struct {
-	Path string     `json:"path"`
+	// Path is the path of the mountpoint.
+	//
+	// This is the path in the container where the Data will be mounted
+	// when the Run starts.
+	Path string `json:"path"`
+
+	// Tags are the tags of the mountpoint.
+	//
+	// For input mountpoints, these are the required tags of the Data to be mounted.
+	// The Data with these all tags will be mounted to the Path when the Run starts.
+	//
+	// For output mountpoints, these are the tags to be attached to the Data mounted.
 	Tags []tags.Tag `json:"tags"`
 }
 
@@ -270,8 +282,100 @@ func (m Mountpoint) Equal(o Mountpoint) bool {
 	return m.Path == o.Path && cmp.SliceEqualUnordered(m.Tags, o.Tags)
 }
 
+// Upstream is the format for input dependencies of a Plan.
+type Upstream struct {
+	// Plan is the upstream Plan.
+	Plan Summary `json:"plan"`
+
+	// Mountpoint represents the Output which is directt upstream.
+	//
+	// Log and Mountpoint are mutually exclusive.
+	Mountpoint *Mountpoint `json:"mountpoint,omitempty"`
+
+	// Log represents the Log which is direct upstream.
+	//
+	// Log and Mountpoint are mutually exclusive.
+	Log *LogPoint `json:"log,omitempty"`
+}
+
+func (d Upstream) Equal(o Upstream) bool {
+	if (d.Mountpoint == nil) != (o.Mountpoint == nil) {
+		return false
+	}
+
+	if (d.Log == nil) != (o.Log == nil) {
+		return false
+	}
+
+	mountpointMatch := (d.Mountpoint == nil && o.Mountpoint == nil) ||
+		d.Mountpoint.Equal(*o.Mountpoint)
+
+	logMatch := (d.Log == nil && o.Log == nil) ||
+		d.Log.Equal(*o.Log)
+
+	return d.Plan.Equal(o.Plan) && mountpointMatch && logMatch
+}
+
+// Input is the format for input mountpoints of a Plan.
+type Input struct {
+	Mountpoint
+
+	// Upstreams are the upstream Plans and their output mountpoints
+	// whose output Data can be mounted to this input mountpoint.
+	Upstreams []Upstream `json:"upstreams"`
+}
+
+func (i Input) Equal(o Input) bool {
+	return i.Mountpoint.Equal(o.Mountpoint) &&
+		cmp.SliceEqualUnordered(i.Upstreams, o.Upstreams)
+}
+
+// Downstream is the format for output dependencies of a Plan.
+type Downstream struct {
+	// Plan is the downstream Plan.
+	Plan Summary `json:"plan"`
+
+	// Mountpoint represents the Input which is direct downstream.
+	Mountpoint Mountpoint `json:"mountpoint"`
+}
+
+func (d Downstream) Equal(o Downstream) bool {
+	return d.Plan.Equal(o.Plan) && d.Mountpoint.Equal(o.Mountpoint)
+}
+
+// Output is the format for output mountpoints of a Plan.
+type Output struct {
+	Mountpoint
+
+	// Downstreams are the downstream Plans and their input mountpoints
+	// can be assigned with Data from this output.
+	Downstreams []Downstream `json:"downstreams"`
+}
+
+func (o Output) Equal(oo Output) bool {
+	return o.Mountpoint.Equal(oo.Mountpoint) &&
+		cmp.SliceEqualUnordered(o.Downstreams, oo.Downstreams)
+}
+
+type Log struct {
+	LogPoint
+
+	// Downstreams are the downstream Plans and their input mountpoints
+	// can be assigned with Data from this output.
+	Downstreams []Downstream `json:"downstreams"`
+}
+
+func (l Log) Equal(ol Log) bool {
+	return l.LogPoint.Equal(ol.LogPoint) &&
+		cmp.SliceEqualUnordered(l.Downstreams, ol.Downstreams)
+}
+
+func (l Log) String() string {
+	return fmt.Sprintf("{LogPoint: %+v, Downstreams: %+v}", l.LogPoint, l.Downstreams)
+}
+
 type LogPoint struct {
-	Tags []tags.Tag
+	Tags []tags.Tag `json:"tags"`
 }
 
 func (lp LogPoint) Equal(o LogPoint) bool {
