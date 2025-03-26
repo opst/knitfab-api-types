@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/internal/utils/cmp"
-	"github.com/opst/knitfab-api-types/plans"
+	"github.com/opst/knitfab-api-types/v2/internal/utils/cmp"
+	"github.com/opst/knitfab-api-types/v2/plans"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 )

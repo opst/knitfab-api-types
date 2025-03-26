@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/opst/knitfab-api-types/internal/utils/cmp"
-	"github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/internal/utils/cmp"
+	"github.com/opst/knitfab-api-types/v2/tags"
 )
 
 func TestTagParsing(t *testing.T) {

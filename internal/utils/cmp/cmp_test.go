@@ -3,7 +3,7 @@ package cmp_test
 import (
 	"testing"
 
-	"github.com/opst/knitfab-api-types/internal/utils/cmp"
+	"github.com/opst/knitfab-api-types/v2/internal/utils/cmp"
 )
 
 type Int int

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/opst/knitfab-api-types/internal/utils/cmp"
-	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/internal/utils/cmp"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 	"gopkg.in/yaml.v3"
 )
 

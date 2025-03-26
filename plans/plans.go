@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/opst/knitfab-api-types/internal/utils/cmp"
-	"github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/internal/utils/cmp"
+	"github.com/opst/knitfab-api-types/v2/tags"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
