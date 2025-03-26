@@ -12,12 +12,23 @@ import (
 )
 
 const (
-	SystemTagPrefix              string = "knit#"
-	KeyKnitId                    string = SystemTagPrefix + "id"
-	KeyKnitTimestamp             string = SystemTagPrefix + "timestamp"
-	KeyKnitTransient             string = SystemTagPrefix + "transient"
-	ValueKnitTransientFailed     string = "failed"
+	SystemTagPrefix  string = "knit#"
+	KeyKnitId        string = SystemTagPrefix + "id"
+	KeyKnitTimestamp string = SystemTagPrefix + "timestamp"
+	KeyKnitTransient string = SystemTagPrefix + "transient"
+
+	// ValueKnitTransientFailed is the value of KeyKnitTransient
+	// when the upstream Run of the Data is failed.
+	ValueKnitTransientFailed string = "failed"
+
+	// ValueKnitTransientProcessing is the value of KeyKnitTransient
+	// when the upstream Run of the Data is processing and the Data is under creation.
 	ValueKnitTransientProcessing string = "processing"
+
+	// ValueKnitTransientPurged is the value of KeyKnitTransient
+	// when the Data is purged.
+	// Any Runs using the Data cannot be retried, and the Data cannot be downloaded.
+	ValueKnitTransientPurged string = "purged"
 )
 
 // Tag represents Tag for Data and Plan input/output.
@@ -70,10 +81,13 @@ func (t *Tag) Parse(s string) error {
 		}
 	case KeyKnitTransient:
 		switch v {
-		case ValueKnitTransientProcessing, ValueKnitTransientFailed:
+		case ValueKnitTransientProcessing, ValueKnitTransientFailed, ValueKnitTransientPurged:
 			// pass
 		default:
-			return fmt.Errorf(`tag parse error: "%s" should be one of "%s" or "%s"`, KeyKnitTransient, ValueKnitTransientProcessing, ValueKnitTransientFailed)
+			return fmt.Errorf(
+				`tag parse error: "%s" should be one of "%s", "%s", or "%s"`,
+				KeyKnitTransient, ValueKnitTransientProcessing, ValueKnitTransientFailed, ValueKnitTransientPurged,
+			)
 		}
 	}
 	t.Key = k
