@@ -9,7 +9,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/apimachinery v0.33.0-beta.0
+	k8s.io/apimachinery v0.33.0-rc.1
 )
 
 require (
