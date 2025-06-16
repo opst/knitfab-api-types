@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/opst/knitfab-api-types/misc/rfctime"
+	"github.com/opst/knitfab-api-types/v2/misc/rfctime"
 )
 
 func TestRFC3339(t *testing.T) {

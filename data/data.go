@@ -1,10 +1,10 @@
 package data
 
 import (
-	"github.com/opst/knitfab-api-types/internal/utils/cmp"
-	"github.com/opst/knitfab-api-types/plans"
-	"github.com/opst/knitfab-api-types/runs"
-	"github.com/opst/knitfab-api-types/tags"
+	"github.com/opst/knitfab-api-types/v2/internal/utils/cmp"
+	"github.com/opst/knitfab-api-types/v2/plans"
+	"github.com/opst/knitfab-api-types/v2/runs"
+	"github.com/opst/knitfab-api-types/v2/tags"
 )
 
 type Summary struct {

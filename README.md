@@ -5,7 +5,7 @@ Types for Knitfab WebAPI
 ## Install
 
 ```
-go get github.com/opst/knitfab-api-types
+go get github.com/opst/knitfab-api-types/v2
 ```
 
 ## Package Structure
